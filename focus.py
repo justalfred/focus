@@ -18,9 +18,9 @@ class writer():
     def __init__(self, screen, y, x):
         self.freq = 0.2
         self.growth = 1.5
-        self.wait = 2
+        self.wait = 1
         self.width = 15
-        self.height = 7
+        self.height = 5
         self.screen = screen
         self.y = y
         self.x = x
@@ -34,38 +34,18 @@ class writer():
     def debug(self, msg):
         self.screen.addstr(self.y * 2 - 1, 0, msg)
 
-    def write(self):
+    def work(self):
         def timeout(signum, frame):
             '''handle timeout'''
             self.response = -1
 
-        lines = [''.join([random.choice(['X', 'x']) 
-                          for _ in range(self.width)])
-                 for _ in range(self.height)]
-        for i, y in enumerate(range(self.height)):
-            if self.reverse:
-                self.screen.addstr(self.top + i,
-                                   self.left,
-                                   lines[i],
-                                   curses.A_REVERSE)
-            else:
-                self.screen.addstr(self.top + i,
-                                   self.left,
-                                   lines[i])
-        star = random.random() < self.freq
-        if star and self.reverse:
-            self.screen.addstr(self.top + random.randint(0, self.height - 1),
-                               self.left + random.randint(0, self.width - 1),
-                               '*', curses.A_REVERSE)
-        elif star:
-            self.screen.addstr(self.top + random.randint(0, self.height - 1),
-                               self.left + random.randint(0, self.width - 1),
-                               '*')
-
+        # display pattern
+        star = self.refresh()
         self.screen.move(0, 0)
         self.screen.refresh()
 
         # wait for input
+        # TODO: try thread instead of signal
         signal.signal(signal.SIGALRM, timeout)
         start = time.time()
         signal.alarm(self.wait)
@@ -76,9 +56,47 @@ class writer():
         wait = time.time() - start
         if wait < self.wait:
             time.sleep(self.wait - wait)
-        
-        self.screen.clear()
 
+        # clear screen, log outcome
+        self.screen.clear()
+        self.check(star)
+
+        self.reverse = not self.reverse  # avoid afterimages
+        if self.response in [ord(' '), -1]:
+            # next
+            self.total += 1
+            return 0
+        else:
+            # quit
+            return 1
+
+    def refresh(self):
+        '''write pattern to screen'''
+        for i, y in enumerate(range(self.height)):
+            line = ''.join([random.choice(r'XxY\/') 
+                            for _ in range(self.width)])
+            if self.reverse:
+                self.screen.addstr(self.top + i,
+                                   self.left,
+                                   line,
+                                   curses.A_REVERSE)
+            else:
+                self.screen.addstr(self.top + i,
+                                   self.left,
+                                   line)
+        star = random.random() < self.freq
+        if star and self.reverse:
+            self.screen.addstr(self.top + random.randint(0, self.height - 1),
+                               self.left + random.randint(0, self.width - 1),
+                               '*', curses.A_REVERSE)
+        elif star:
+            self.screen.addstr(self.top + random.randint(0, self.height - 1),
+                               self.left + random.randint(0, self.width - 1),
+                               '*')
+        return star
+
+    def check(self, star):
+        '''Check user response/pass'''
         if star and self.response == -1:
             # wrong
             self.screen.addstr((self.top + self.height + 2),
@@ -93,14 +111,6 @@ class writer():
             self.caught += 1
             self.freq /= self.growth
 
-        self.reverse = not self.reverse
-        if self.response in [ord(' '), -1]:
-            # next
-            self.total += 1
-            return 0
-        else:
-            # quit
-            return 1
 
     def print_stats(self):
         self.screen.addstr(self.top,
@@ -136,9 +146,9 @@ When you are ready to start, press enter.'''
     stdscr.clear()
 
     # main loop
-    response = w.write()
+    response = w.work()
     while response != 1:
-        response = w.write()
+        response = w.work()
 
     # close out
     w.print_stats()
