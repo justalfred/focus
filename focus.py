@@ -16,7 +16,7 @@ import random
 class writer():
     def __init__(self, screen, y, x):
         self.freq = 0.2
-        self.growth = 1.5
+        self.growth = 1.2
         self.wait = 1
         self.width = 15
         self.height = 5
@@ -45,7 +45,9 @@ class writer():
 
         # wait for input
         start = time.time()
-        self.screen.timeout(self.wait * 1000)
+        self.screen.timeout(150)  # block first 150 ms input
+        self.screen.getch()
+        self.screen.timeout(self.wait * 1000 - 150)
         self.response = self.screen.getch()
 
         # fill out the waiting time
@@ -100,7 +102,7 @@ class writer():
             self.missed += 1
         elif not star and self.response == ord(' '):
             # wrong
-            self.screen.addstr((self.top + self.height + 2),
+            self.screen.addstr((self.top - 2),
                                self.x - 7, 'NO STAR! FOCUS!')
         elif star and self.response == ord(' '):
             # right
@@ -125,9 +127,9 @@ class writer():
 
 def main(stdscr):
     # initialize
-    explanation = '''This is a game to help train your ability to focus
-You will see a row of Xs. Occasionally a * will be among the Xs.
-When you see a *, press the space bar. Press any other key to quit.
+    explanation = '''This is a game to help train your ability to focus.
+You will see a group of straight-edged characters. Occasionally a * will be
+among them. When you see a *, press the space bar. Press any other key to quit.
 The time between showing a * will increase, straining your attention.
 When you are ready to start, press enter.'''
     maxy, maxx = stdscr.getmaxyx()
