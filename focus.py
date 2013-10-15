@@ -11,7 +11,6 @@ This is a simple little game to train your ability to focus your attention.
 import curses
 import time
 import random
-import signal
 
 
 class writer():
@@ -45,13 +44,10 @@ class writer():
         self.screen.refresh()
 
         # wait for input
-        # TODO: try thread instead of signal
-        signal.signal(signal.SIGALRM, timeout)
         start = time.time()
-        signal.alarm(self.wait)
+        self.screen.timeout(self.wait * 1000)
         self.response = self.screen.getch()
-        signal.alarm(0)
-        
+
         # fill out the waiting time
         wait = time.time() - start
         if wait < self.wait:
@@ -73,7 +69,7 @@ class writer():
     def refresh(self):
         '''write pattern to screen'''
         for i, y in enumerate(range(self.height)):
-            line = ''.join([random.choice(r'XxY\/') 
+            line = ''.join([random.choice(r'XxY\/')
                             for _ in range(self.width)])
             if self.reverse:
                 self.screen.addstr(self.top + i,
@@ -111,7 +107,6 @@ class writer():
             self.caught += 1
             self.freq /= self.growth
 
-
     def print_stats(self):
         self.screen.addstr(self.top,
                            self.left,
@@ -124,7 +119,9 @@ class writer():
                            'missed stars: %d' % self.missed)
 
         # wait for input to close
-        response = self.screen.getch()
+        self.screen.timeout(-1)
+        self.screen.getch()
+
 
 def main(stdscr):
     # initialize
